@@ -1,0 +1,883 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>DeepAccount — Account Intelligence</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Playfair+Display:ital,wght@0,700;0,800;1,700&display=swap" rel="stylesheet" />
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --cream:        #FAF8F3;
+      --cream2:       #F3EFE6;
+      --cream3:       #EAE3D6;
+      --surface:      #FFFFFF;
+      --text:         #1C1712;
+      --text2:        #3D3529;
+      --muted:        #8C7E6E;
+      --border:       #E0D8CC;
+      --border2:      #CEC4B4;
+      --accent:       #C17B2A;
+      --accent-dark:  #96601E;
+      --accent-light: #FDF3E3;
+      --radius:       14px;
+      --shadow-sm:    0 1px 4px rgba(28,23,18,.06);
+      --shadow:       0 4px 20px rgba(28,23,18,.09);
+      --shadow-lg:    0 12px 48px rgba(28,23,18,.12);
+      --green:        #15803D;
+      --green-bg:     #F0FDF4;
+      --green-border: #BBF7D0;
+      --red:          #B91C1C;
+      --red-bg:       #FEF2F2;
+      --red-border:   #FECACA;
+    }
+
+    body {
+      font-family: 'Inter', system-ui, sans-serif;
+      background: var(--cream);
+      color: var(--text);
+      min-height: 100vh;
+      line-height: 1.6;
+      -webkit-font-smoothing: antialiased;
+    }
+
+    a { color: inherit; text-decoration: none; }
+    button { cursor: pointer; font-family: inherit; border: none; outline: none; }
+
+    /* ── Header ────────────────────────── */
+    header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 18px 40px;
+      border-bottom: 1px solid var(--border);
+      background: var(--cream);
+      position: sticky; top: 0; z-index: 40;
+    }
+
+    .logo {
+      font-family: 'Playfair Display', serif;
+      font-size: 20px;
+      font-weight: 800;
+      color: var(--text);
+      letter-spacing: -0.3px;
+    }
+    .logo em { color: var(--accent); font-style: italic; }
+
+    .gear-btn {
+      display: flex; align-items: center; gap: 6px;
+      background: var(--surface);
+      border: 1px solid var(--border2);
+      color: var(--muted);
+      padding: 7px 14px;
+      border-radius: 100px;
+      font-size: 12px;
+      font-weight: 600;
+      transition: border-color .15s, color .15s, box-shadow .15s;
+    }
+    .gear-btn:hover {
+      border-color: var(--accent);
+      color: var(--accent);
+      box-shadow: 0 0 0 3px var(--accent-light);
+    }
+
+    /* ── Settings drawer ───────────────── */
+    .overlay {
+      display: none; position: fixed; inset: 0;
+      background: rgba(28,23,18,.35); z-index: 90;
+    }
+    .overlay.open { display: block; }
+
+    .drawer {
+      position: fixed; top: 0; right: 0;
+      width: 360px; height: 100vh;
+      background: var(--surface);
+      border-left: 1px solid var(--border);
+      padding: 28px 26px;
+      z-index: 100;
+      transform: translateX(100%);
+      transition: transform .25s cubic-bezier(.4,0,.2,1);
+      overflow-y: auto;
+      box-shadow: var(--shadow-lg);
+    }
+    .drawer.open { transform: translateX(0); }
+
+    .drawer-head {
+      display: flex; align-items: center; justify-content: space-between;
+      margin-bottom: 28px;
+    }
+    .drawer-title {
+      font-family: 'Playfair Display', serif;
+      font-size: 17px; font-weight: 800; color: var(--text);
+    }
+    .close-btn {
+      background: var(--cream2); border: 1px solid var(--border);
+      color: var(--muted); padding: 4px 10px; border-radius: 100px;
+      font-size: 13px; font-weight: 600;
+      transition: color .15s, border-color .15s;
+    }
+    .close-btn:hover { color: var(--text); border-color: var(--border2); }
+
+    .field-group { margin-bottom: 20px; }
+    .field-label {
+      display: block;
+      font-size: 10px; font-weight: 700;
+      text-transform: uppercase; letter-spacing: 1.2px;
+      color: var(--muted); margin-bottom: 7px;
+    }
+    .field-note { font-size: 11px; color: var(--muted); margin-top: 5px; }
+
+    input[type="password"],
+    input[type="url"],
+    textarea {
+      width: 100%;
+      background: var(--cream);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 11px 14px;
+      color: var(--text);
+      font-size: 14px; font-family: inherit;
+      outline: none;
+      transition: border-color .15s, box-shadow .15s;
+    }
+    input[type="password"]:focus,
+    input[type="url"]:focus,
+    textarea:focus {
+      border-color: var(--accent);
+      box-shadow: 0 0 0 3px var(--accent-light);
+      background: var(--surface);
+    }
+    textarea { resize: vertical; min-height: 110px; line-height: 1.6; }
+
+    .save-btn {
+      width: 100%;
+      background: var(--text);
+      color: var(--cream);
+      border-radius: 100px;
+      padding: 12px;
+      font-size: 14px; font-weight: 700;
+      transition: background .15s;
+      margin-top: 8px;
+    }
+    .save-btn:hover { background: var(--text2); }
+
+    .key-row {
+      display: flex; align-items: center; gap: 16px;
+      margin-top: 18px; font-size: 12px; color: var(--muted);
+    }
+    .key-item { display: flex; align-items: center; gap: 5px; }
+    .dot { width: 7px; height: 7px; border-radius: 50%; background: var(--border2); }
+    .dot.on { background: var(--green); }
+
+    /* ── Main layout ───────────────────── */
+    main { max-width: 740px; margin: 0 auto; padding: 52px 24px 80px; }
+
+    /* ── Hero ──────────────────────────── */
+    .hero { text-align: center; margin-bottom: 40px; }
+    .hero h1 {
+      font-family: 'Playfair Display', serif;
+      font-size: 46px; font-weight: 800;
+      letter-spacing: -1px; line-height: 1.05;
+      color: var(--text); margin-bottom: 10px;
+    }
+    .hero h1 em { color: var(--accent); font-style: italic; }
+    .hero p { font-size: 15px; color: var(--muted); max-width: 380px; margin: 0 auto; }
+
+    /* ── Form card ─────────────────────── */
+    .form-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 28px;
+      box-shadow: var(--shadow-sm);
+    }
+
+    .form-field { margin-bottom: 18px; }
+    .form-field label {
+      display: block;
+      font-size: 10px; font-weight: 700;
+      text-transform: uppercase; letter-spacing: 1.2px;
+      color: var(--muted); margin-bottom: 7px;
+    }
+
+    .submit-btn {
+      width: 100%;
+      background: var(--accent);
+      color: #fff;
+      border-radius: 100px;
+      padding: 14px;
+      font-size: 15px; font-weight: 700;
+      transition: background .15s, box-shadow .15s;
+      margin-top: 4px;
+      letter-spacing: -0.2px;
+    }
+    .submit-btn:hover { background: var(--accent-dark); box-shadow: var(--shadow); }
+    .submit-btn:disabled { opacity: .45; cursor: not-allowed; }
+
+    .error-bar {
+      margin-top: 14px;
+      background: var(--red-bg);
+      border: 1px solid var(--red-border);
+      border-radius: 10px;
+      padding: 11px 14px;
+      font-size: 13px; font-weight: 500;
+      color: var(--red);
+      display: none;
+    }
+
+    /* ── Loading ───────────────────────── */
+    #loadingSection { display: none; }
+
+    .loading-label {
+      font-size: 10px; font-weight: 700;
+      text-transform: uppercase; letter-spacing: 1.2px;
+      color: var(--muted); text-align: center;
+      margin-bottom: 20px;
+    }
+
+    @keyframes shimmer {
+      from { background-position: -600px 0; }
+      to   { background-position:  600px 0; }
+    }
+    .shimmer {
+      background: linear-gradient(90deg, var(--border) 25%, var(--cream2) 50%, var(--border) 75%);
+      background-size: 600px 100%;
+      animation: shimmer 1.5s infinite;
+      border-radius: 6px;
+    }
+
+    .skeleton-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 24px 26px;
+      box-shadow: var(--shadow-sm);
+      display: flex; flex-direction: column; gap: 12px;
+      margin-bottom: 12px;
+    }
+    .sk-line { height: 12px; }
+    .sk-title { height: 16px; width: 40%; }
+    .sk-score { height: 48px; width: 72px; border-radius: 50%; }
+    .sk-bar { height: 7px; border-radius: 4px; }
+
+    .step-status {
+      display: flex; align-items: center; justify-content: center;
+      gap: 8px; font-size: 13px; color: var(--muted);
+      margin-bottom: 20px;
+    }
+    .step-spinner {
+      width: 16px; height: 16px;
+      border: 2px solid var(--border);
+      border-top-color: var(--accent);
+      border-radius: 50%;
+      animation: spin .7s linear infinite;
+      flex-shrink: 0;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    /* ── Results ───────────────────────── */
+    #resultsSection { display: none; }
+
+    .results-header {
+      display: flex; align-items: flex-end;
+      justify-content: space-between;
+      margin-bottom: 24px; gap: 16px;
+    }
+    .results-eyebrow {
+      font-size: 10px; font-weight: 700;
+      text-transform: uppercase; letter-spacing: 1.2px;
+      color: var(--muted); margin-bottom: 4px;
+    }
+    .results-company {
+      font-family: 'Playfair Display', serif;
+      font-size: 24px; font-weight: 800;
+      color: var(--text); letter-spacing: -0.5px;
+    }
+
+    .new-btn {
+      background: var(--surface);
+      border: 1px solid var(--border2);
+      color: var(--muted);
+      padding: 7px 16px;
+      border-radius: 100px;
+      font-size: 12px; font-weight: 600;
+      white-space: nowrap;
+      transition: color .15s, border-color .15s;
+      flex-shrink: 0;
+    }
+    .new-btn:hover { color: var(--text); border-color: var(--muted); }
+
+    /* Cards */
+    .cards { display: flex; flex-direction: column; gap: 12px; }
+
+    .card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 24px 26px;
+      box-shadow: var(--shadow-sm);
+    }
+
+    .card-label {
+      font-size: 10px; font-weight: 700;
+      text-transform: uppercase; letter-spacing: 1.2px;
+      color: var(--muted); margin-bottom: 18px;
+    }
+
+    /* Score card */
+    .score-layout {
+      display: flex; align-items: center; gap: 28px;
+    }
+    .score-circle {
+      width: 80px; height: 80px;
+      border-radius: 50%; border: 3px solid;
+      display: flex; flex-direction: column;
+      align-items: center; justify-content: center;
+      flex-shrink: 0;
+    }
+    .score-n {
+      font-family: 'Playfair Display', serif;
+      font-size: 26px; font-weight: 800; line-height: 1;
+    }
+    .score-denom { font-size: 10px; font-weight: 600; opacity: .65; }
+    .score-right { flex: 1; }
+    .score-bar-track {
+      height: 7px; background: var(--cream3);
+      border-radius: 4px; overflow: hidden; margin-bottom: 8px;
+    }
+    .score-bar-fill {
+      height: 100%; border-radius: 4px;
+      width: 0%; transition: width .9s cubic-bezier(.4,0,.2,1);
+    }
+    .score-verdict {
+      font-size: 14px; font-weight: 700;
+    }
+    .score-sub { font-size: 12px; color: var(--muted); margin-top: 2px; }
+
+    /* Flags row */
+    .flags-row {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 12px;
+    }
+
+    .flag-card-label-green {
+      font-size: 10px; font-weight: 700;
+      text-transform: uppercase; letter-spacing: 1.2px;
+      color: var(--green); margin-bottom: 14px;
+    }
+    .flag-card-label-red {
+      font-size: 10px; font-weight: 700;
+      text-transform: uppercase; letter-spacing: 1.2px;
+      color: var(--red); margin-bottom: 14px;
+    }
+
+    .flag-item {
+      display: flex; align-items: flex-start; gap: 9px;
+      font-size: 13px; color: var(--text2); line-height: 1.55;
+      padding-bottom: 10px; border-bottom: 1px solid var(--border);
+    }
+    .flag-item:last-child { border-bottom: none; padding-bottom: 0; }
+    .flag-bullet {
+      font-size: 11px; font-weight: 800;
+      margin-top: 2px; flex-shrink: 0;
+    }
+    .flag-bullet.g { color: var(--green); }
+    .flag-bullet.r { color: var(--red); }
+
+    /* Profiles */
+    .profiles-grid {
+      display: grid; grid-template-columns: 1fr 1fr; gap: 16px;
+    }
+    .profile-badge {
+      display: inline-block;
+      font-size: 10px; font-weight: 700;
+      text-transform: uppercase; letter-spacing: .8px;
+      padding: 3px 10px; border-radius: 100px; border: 1px solid;
+      margin-bottom: 10px;
+    }
+    .badge-champ {
+      background: var(--accent-light);
+      color: var(--accent-dark);
+      border-color: #F0C580;
+    }
+    .badge-dm {
+      background: var(--cream2);
+      color: var(--text2);
+      border-color: var(--border2);
+    }
+    .profile-title {
+      font-size: 14px; font-weight: 700; color: var(--text); margin-bottom: 6px;
+    }
+    .profile-approach { font-size: 13px; color: var(--muted); line-height: 1.6; }
+
+    /* First line */
+    .first-line-text {
+      font-size: 15px; line-height: 1.75;
+      color: var(--text2); font-style: italic;
+      border-left: 3px solid var(--accent);
+      padding-left: 16px;
+    }
+
+    /* Next step */
+    .next-step-list { list-style: none; display: flex; flex-direction: column; gap: 6px; }
+    .next-step-list li {
+      font-size: 14px; color: var(--text2);
+      display: flex; gap: 10px; line-height: 1.55;
+    }
+    .next-step-list li::before {
+      content: '→'; color: var(--accent); font-weight: 700; flex-shrink: 0;
+    }
+
+    /* Toast */
+    .toast {
+      position: fixed; bottom: 24px; left: 50%;
+      transform: translateX(-50%) translateY(60px);
+      background: var(--text); color: var(--cream);
+      padding: 9px 20px; border-radius: 100px;
+      font-size: 13px; font-weight: 600;
+      z-index: 200;
+      opacity: 0; pointer-events: none;
+      transition: transform .25s cubic-bezier(.4,0,.2,1), opacity .25s;
+    }
+    .toast.show { transform: translateX(-50%) translateY(0); opacity: 1; }
+
+    @media (max-width: 600px) {
+      header { padding: 16px 20px; }
+      main { padding: 36px 16px 60px; }
+      .hero h1 { font-size: 34px; }
+      .flags-row, .profiles-grid { grid-template-columns: 1fr; }
+      .score-layout { flex-direction: column; align-items: flex-start; gap: 16px; }
+    }
+  </style>
+</head>
+<body>
+
+<!-- Header -->
+<header>
+  <div class="logo">Deep<em>Account</em></div>
+  <button class="gear-btn" id="gearBtn">
+    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+      <circle cx="12" cy="12" r="3"/>
+      <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/>
+    </svg>
+    API Keys
+  </button>
+</header>
+
+<!-- Overlay -->
+<div class="overlay" id="overlay"></div>
+
+<!-- Settings Drawer -->
+<div class="drawer" id="drawer">
+  <div class="drawer-head">
+    <div class="drawer-title">API Keys</div>
+    <button class="close-btn" id="closeDrawer">Close</button>
+  </div>
+
+  <div class="field-group">
+    <label class="field-label">Anthropic API Key</label>
+    <input type="password" id="anthropicKey" placeholder="sk-ant-api03-…" autocomplete="off" />
+    <div class="field-note">console.anthropic.com</div>
+  </div>
+
+  <div class="field-group">
+    <label class="field-label">Firecrawl API Key</label>
+    <input type="password" id="firecrawlKey" placeholder="fc-…" autocomplete="off" />
+    <div class="field-note">firecrawl.dev</div>
+  </div>
+
+  <button class="save-btn" id="saveBtn">Save Keys</button>
+
+  <div class="key-row">
+    <div class="key-item"><div class="dot" id="dotA"></div> Anthropic</div>
+    <div class="key-item"><div class="dot" id="dotF"></div> Firecrawl</div>
+  </div>
+</div>
+
+<!-- Main -->
+<main>
+
+  <!-- Form -->
+  <div id="formSection">
+    <div class="hero">
+      <h1>Deep<em>Account</em></h1>
+      <p>Paste a URL and your ICP. Get a full account intelligence brief in seconds.</p>
+    </div>
+
+    <div class="form-card">
+      <div class="form-field">
+        <label>Company Website</label>
+        <input type="url" id="companyUrl" placeholder="https://acme.com" />
+      </div>
+      <div class="form-field">
+        <label>Your ICP Description</label>
+        <textarea id="icpDesc" placeholder="e.g. Mid-market B2B SaaS, 50–500 employees, sales team of 10+, using Salesforce, struggling with outbound pipeline…"></textarea>
+      </div>
+      <button class="submit-btn" id="submitBtn">Analyze Account →</button>
+      <div class="error-bar" id="errorBar"></div>
+    </div>
+  </div>
+
+  <!-- Loading -->
+  <div id="loadingSection">
+    <div class="step-status">
+      <div class="step-spinner"></div>
+      <span id="stepLabel">Scraping website…</span>
+    </div>
+
+    <!-- Skeleton that mirrors the result layout -->
+    <div class="skeleton-card">
+      <div class="sk-title shimmer"></div>
+      <div style="display:flex;align-items:center;gap:24px;margin-top:4px">
+        <div class="sk-score shimmer"></div>
+        <div style="flex:1;display:flex;flex-direction:column;gap:10px">
+          <div class="sk-bar shimmer" style="width:65%"></div>
+          <div class="sk-line shimmer" style="width:30%"></div>
+        </div>
+      </div>
+    </div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:12px">
+      <div class="skeleton-card">
+        <div class="sk-title shimmer"></div>
+        <div style="display:flex;flex-direction:column;gap:10px">
+          <div class="sk-line shimmer"></div>
+          <div class="sk-line shimmer" style="width:80%"></div>
+          <div class="sk-line shimmer" style="width:90%"></div>
+        </div>
+      </div>
+      <div class="skeleton-card">
+        <div class="sk-title shimmer"></div>
+        <div style="display:flex;flex-direction:column;gap:10px">
+          <div class="sk-line shimmer"></div>
+          <div class="sk-line shimmer" style="width:75%"></div>
+          <div class="sk-line shimmer" style="width:85%"></div>
+        </div>
+      </div>
+    </div>
+    <div class="skeleton-card">
+      <div class="sk-title shimmer"></div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:20px">
+        <div style="display:flex;flex-direction:column;gap:8px">
+          <div class="sk-line shimmer" style="width:55%"></div>
+          <div class="sk-line shimmer"></div>
+          <div class="sk-line shimmer" style="width:70%"></div>
+        </div>
+        <div style="display:flex;flex-direction:column;gap:8px">
+          <div class="sk-line shimmer" style="width:60%"></div>
+          <div class="sk-line shimmer"></div>
+          <div class="sk-line shimmer" style="width:65%"></div>
+        </div>
+      </div>
+    </div>
+    <div class="skeleton-card">
+      <div class="sk-title shimmer"></div>
+      <div style="display:flex;flex-direction:column;gap:9px">
+        <div class="sk-line shimmer"></div>
+        <div class="sk-line shimmer" style="width:82%"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Results -->
+  <div id="resultsSection">
+    <div class="results-header">
+      <div>
+        <div class="results-eyebrow">Account Intelligence Brief</div>
+        <div class="results-company" id="resCompany"></div>
+      </div>
+      <button class="new-btn" id="newBtn">← New Analysis</button>
+    </div>
+
+    <div class="cards">
+
+      <!-- Fit Score -->
+      <div class="card">
+        <div class="card-label">ICP Fit Score</div>
+        <div class="score-layout">
+          <div class="score-circle" id="scoreCircle">
+            <span class="score-n" id="scoreN">—</span>
+            <span class="score-denom">/ 100</span>
+          </div>
+          <div class="score-right">
+            <div class="score-bar-track">
+              <div class="score-bar-fill" id="scoreBar"></div>
+            </div>
+            <div class="score-verdict" id="scoreVerdict"></div>
+            <div class="score-sub" id="scoreSub"></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Flags -->
+      <div class="flags-row">
+        <div class="card">
+          <div class="flag-card-label-green">Green Flags</div>
+          <div id="greenFlags"></div>
+        </div>
+        <div class="card">
+          <div class="flag-card-label-red">Red Flags</div>
+          <div id="redFlags"></div>
+        </div>
+      </div>
+
+      <!-- Buyer Profiles -->
+      <div class="card">
+        <div class="card-label">Buyer Profiles</div>
+        <div class="profiles-grid">
+          <div>
+            <div class="profile-badge badge-champ">Champion</div>
+            <div class="profile-title" id="champTitle"></div>
+            <div class="profile-approach" id="champApproach"></div>
+          </div>
+          <div>
+            <div class="profile-badge badge-dm">Decision Maker</div>
+            <div class="profile-title" id="dmTitle"></div>
+            <div class="profile-approach" id="dmApproach"></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- First Line -->
+      <div class="card">
+        <div class="card-label">Suggested First Line</div>
+        <div class="first-line-text" id="firstLine"></div>
+      </div>
+
+      <!-- Next Step -->
+      <div class="card">
+        <div class="card-label">Recommended Next Step</div>
+        <ul class="next-step-list" id="nextStep"></ul>
+      </div>
+
+    </div>
+  </div>
+
+</main>
+
+<!-- Toast -->
+<div class="toast" id="toast"></div>
+
+<script>
+  const $ = id => document.getElementById(id);
+
+  // ── Settings ───────────────────────────────────────────────────────────────
+  function loadKeys() {
+    const ak = localStorage.getItem('da_ak') || '';
+    const fk = localStorage.getItem('da_fk') || '';
+    $('anthropicKey').value = ak;
+    $('firecrawlKey').value = fk;
+    $('dotA').classList.toggle('on', !!ak);
+    $('dotF').classList.toggle('on', !!fk);
+  }
+
+  $('gearBtn').addEventListener('click', () => {
+    $('drawer').classList.add('open');
+    $('overlay').classList.add('open');
+  });
+  function closeDrawer() {
+    $('drawer').classList.remove('open');
+    $('overlay').classList.remove('open');
+  }
+  $('closeDrawer').addEventListener('click', closeDrawer);
+  $('overlay').addEventListener('click', closeDrawer);
+
+  $('saveBtn').addEventListener('click', () => {
+    const ak = $('anthropicKey').value.trim();
+    const fk = $('firecrawlKey').value.trim();
+    if (ak) localStorage.setItem('da_ak', ak);
+    if (fk) localStorage.setItem('da_fk', fk);
+    $('dotA').classList.toggle('on', !!ak);
+    $('dotF').classList.toggle('on', !!fk);
+    closeDrawer();
+    toast('Keys saved');
+  });
+
+  // ── Toast ──────────────────────────────────────────────────────────────────
+  function toast(msg) {
+    const t = $('toast');
+    t.textContent = msg;
+    t.classList.add('show');
+    setTimeout(() => t.classList.remove('show'), 2200);
+  }
+
+  // ── Error ──────────────────────────────────────────────────────────────────
+  function showError(msg) {
+    const el = $('errorBar');
+    el.textContent = msg;
+    el.style.display = 'block';
+  }
+  function clearError() { $('errorBar').style.display = 'none'; }
+
+  // ── Firecrawl ──────────────────────────────────────────────────────────────
+  async function scrapePage(url, apiKey) {
+    const res = await fetch('https://api.firecrawl.dev/v1/scrape', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${apiKey}`
+      },
+      body: JSON.stringify({ url, formats: ['markdown'], onlyMainContent: true })
+    });
+    if (!res.ok) throw new Error(`Firecrawl ${res.status}`);
+    const json = await res.json();
+    return json.data?.markdown || json.markdown || '';
+  }
+
+  async function scrapeCompany(base, apiKey) {
+    const b = base.replace(/\/+$/, '');
+    const pages = [b, b + '/pricing', b + '/about', b + '/careers', b + '/blog'];
+    const settled = await Promise.allSettled(pages.map(u => scrapePage(u, apiKey)));
+    const content = settled
+      .filter(r => r.status === 'fulfilled' && r.value?.trim())
+      .map(r => r.value)
+      .join('\n\n---\n\n');
+    if (!content.trim()) throw new Error('Firecrawl returned no content. Check the URL and your Firecrawl key.');
+    return content;
+  }
+
+  // ── Claude ─────────────────────────────────────────────────────────────────
+  const SYSTEM = `You are a B2B account intelligence analyst. Given scraped website content and an ICP description, produce a structured account plan. Return ONLY valid JSON with keys: fit_score (number 0-100), green_flags (array of exactly 3 strings), red_flags (array of exactly 3 strings), champion (object with title and approach), decision_maker (object with title and approach), first_line (string), next_step (string)`;
+
+  async function callClaude(content, icp, apiKey) {
+    const res = await fetch('https://api.anthropic.com/v1/messages', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'x-api-key': apiKey,
+        'anthropic-version': '2023-06-01',
+        'anthropic-dangerous-direct-browser-access': 'true'
+      },
+      body: JSON.stringify({
+        model: 'claude-sonnet-4-20250514',
+        max_tokens: 1024,
+        system: SYSTEM,
+        messages: [{
+          role: 'user',
+          content: `Website content:\n${content.slice(0, 14000)}\n\nICP Description:\n${icp}`
+        }]
+      })
+    });
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({}));
+      throw new Error(err.error?.message || `Claude API ${res.status}`);
+    }
+    const data = await res.json();
+    const raw = data.content?.[0]?.text || '';
+    const cleaned = raw.replace(/```json\s*/gi, '').replace(/```\s*/g, '').trim();
+    const match = cleaned.match(/\{[\s\S]*\}/);
+    if (!match) throw new Error('Could not parse response — try again.');
+    return JSON.parse(match[0]);
+  }
+
+  // ── Analysis flow ──────────────────────────────────────────────────────────
+  $('submitBtn').addEventListener('click', runAnalysis);
+  $('newBtn').addEventListener('click', () => {
+    $('resultsSection').style.display = 'none';
+    $('formSection').style.display = 'block';
+  });
+
+  async function runAnalysis() {
+    const url = $('companyUrl').value.trim();
+    const icp = $('icpDesc').value.trim();
+    const ak  = localStorage.getItem('da_ak') || '';
+    const fk  = localStorage.getItem('da_fk') || '';
+
+    clearError();
+    if (!url) return showError('Please enter a company URL.');
+    if (!icp) return showError('Please describe your ICP.');
+    if (!ak)  return showError('Anthropic API key required — click "API Keys" top right.');
+    if (!fk)  return showError('Firecrawl API key required — click "API Keys" top right.');
+    try { new URL(url); } catch { return showError('Enter a valid URL (include https://).'); }
+
+    $('formSection').style.display = 'none';
+    $('loadingSection').style.display = 'block';
+    $('stepLabel').textContent = 'Scraping website…';
+
+    try {
+      const content = await scrapeCompany(url, fk);
+
+      $('stepLabel').textContent = 'Analyzing signals…';
+      await new Promise(r => setTimeout(r, 300));
+
+      $('stepLabel').textContent = 'Building account plan…';
+      const plan = await callClaude(content, icp, ak);
+
+      await new Promise(r => setTimeout(r, 200));
+      renderResults(url, plan);
+
+    } catch (err) {
+      $('loadingSection').style.display = 'none';
+      $('formSection').style.display = 'block';
+      showError(err.message || 'Something went wrong. Check your API keys and try again.');
+    }
+  }
+
+  // ── Render ─────────────────────────────────────────────────────────────────
+  function esc(s) {
+    return String(s)
+      .replace(/&/g,'&amp;').replace(/</g,'&lt;')
+      .replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+  }
+
+  function renderResults(url, plan) {
+    $('loadingSection').style.display = 'none';
+    $('resultsSection').style.display = 'block';
+
+    // Company name
+    try {
+      $('resCompany').textContent = new URL(url).hostname.replace(/^www\./, '');
+    } catch {
+      $('resCompany').textContent = url;
+    }
+
+    // Score
+    const score = Math.max(0, Math.min(100, Math.round(Number(plan.fit_score) || 0)));
+    const isStrong = score >= 71, isWeak = score < 41;
+    const color   = isStrong ? '#15803D' : isWeak ? '#B91C1C' : '#92400E';
+    const bg      = isStrong ? '#F0FDF4' : isWeak ? '#FEF2F2' : '#FFFBEB';
+    const border  = isStrong ? '#BBF7D0' : isWeak ? '#FECACA' : '#FDE68A';
+    const verdict = isStrong ? 'Strong Fit' : isWeak ? 'Weak Fit' : 'Moderate Fit';
+    const sub     = isStrong ? 'High overlap with your ICP' : isWeak ? 'Significant gaps with your ICP' : 'Some alignment, worth qualifying';
+
+    $('scoreCircle').style.cssText += `background:${bg};border-color:${border};color:${color}`;
+    $('scoreN').textContent = score;
+    $('scoreVerdict').textContent = verdict;
+    $('scoreVerdict').style.color = color;
+    $('scoreSub').textContent = sub;
+    $('scoreBar').style.background = color;
+    requestAnimationFrame(() => requestAnimationFrame(() => {
+      $('scoreBar').style.width = score + '%';
+    }));
+
+    // Flags
+    const flagHtml = (flags, cls, bullet) =>
+      (flags || []).slice(0, 3).map(f =>
+        `<div class="flag-item"><span class="flag-bullet ${cls}">${bullet}</span><span>${esc(f)}</span></div>`
+      ).join('');
+
+    $('greenFlags').innerHTML = flagHtml(plan.green_flags, 'g', '✓');
+    $('redFlags').innerHTML   = flagHtml(plan.red_flags,   'r', '!');
+
+    // Profiles
+    $('champTitle').textContent    = plan.champion?.title      || '—';
+    $('champApproach').textContent = plan.champion?.approach   || '—';
+    $('dmTitle').textContent       = plan.decision_maker?.title    || '—';
+    $('dmApproach').textContent    = plan.decision_maker?.approach || '—';
+
+    // First line
+    $('firstLine').textContent = plan.first_line ? `"${plan.first_line}"` : '—';
+
+    // Next step — render as list item(s)
+    const ns = plan.next_step || '—';
+    $('nextStep').innerHTML = `<li><span>${esc(ns)}</span></li>`;
+  }
+
+  // ── Init ───────────────────────────────────────────────────────────────────
+  loadKeys();
+</script>
+</body>
+</html>
