@@ -307,7 +307,47 @@
     .badge-champ { background: var(--accent-light); color: var(--accent-dark); border-color: #F0C580; }
     .badge-dm { background: var(--cream2); color: var(--text2); border-color: var(--border2); }
     .profile-title { font-size: 14px; font-weight: 700; margin-bottom: 6px; }
-    .profile-approach { font-size: 13px; color: var(--muted); line-height: 1.6; }
+    .profile-approach { font-size: 13px; color: var(--muted); line-height: 1.6; margin-bottom: 14px; }
+
+    /* Contact list */
+    .contacts-wrap { border-top: 1px solid var(--border); padding-top: 12px; margin-top: 2px; }
+    .contacts-label { font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: 1px; color: var(--muted); margin-bottom: 8px; }
+    .contact-item {
+      display: flex; align-items: center; gap: 10px;
+      padding: 7px 10px; border-radius: 10px;
+      border: 1px solid var(--border); background: var(--cream);
+      margin-bottom: 6px; text-decoration: none;
+      transition: border-color .15s, box-shadow .15s;
+    }
+    .contact-item:last-child { margin-bottom: 0; }
+    .contact-item:hover { border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-light); }
+    .contact-avatar {
+      width: 28px; height: 28px; border-radius: 50%;
+      background: var(--cream3); border: 1px solid var(--border2);
+      font-size: 11px; font-weight: 700; color: var(--muted);
+      display: flex; align-items: center; justify-content: center;
+      flex-shrink: 0; overflow: hidden;
+    }
+    .contact-avatar img { width: 100%; height: 100%; object-fit: cover; border-radius: 50%; }
+    .contact-info { flex: 1; min-width: 0; }
+    .contact-name { font-size: 12px; font-weight: 700; color: var(--text); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .contact-role { font-size: 11px; color: var(--muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .contact-li {
+      width: 22px; height: 22px; border-radius: 5px;
+      background: #0A66C2; color: #fff;
+      font-size: 10px; font-weight: 800;
+      display: flex; align-items: center; justify-content: center;
+      flex-shrink: 0;
+    }
+    .contact-li-dim {
+      width: 22px; height: 22px; border-radius: 5px;
+      background: var(--border); color: var(--muted);
+      font-size: 10px; font-weight: 800;
+      display: flex; align-items: center; justify-content: center;
+      flex-shrink: 0;
+    }
+    .contacts-loading { font-size: 12px; color: var(--muted); display: flex; align-items: center; gap: 6px; }
+    .contacts-spinner { width: 12px; height: 12px; border: 1.5px solid var(--border); border-top-color: var(--accent); border-radius: 50%; animation: spin .7s linear infinite; }
 
     /* First line */
     .first-line-text { font-size: 15px; line-height: 1.8; color: var(--text2); font-style: italic; border-left: 3px solid var(--accent); padding: 2px 0 2px 16px; }
@@ -503,11 +543,19 @@
             <div class="profile-badge badge-champ">Champion</div>
             <div class="profile-title" id="champTitle"></div>
             <div class="profile-approach" id="champApproach"></div>
+            <div class="contacts-wrap">
+              <div class="contacts-label">At this company</div>
+              <div id="champContacts"><div class="contacts-loading"><div class="contacts-spinner"></div>Finding contacts…</div></div>
+            </div>
           </div>
           <div>
             <div class="profile-badge badge-dm">Decision Maker</div>
             <div class="profile-title" id="dmTitle"></div>
             <div class="profile-approach" id="dmApproach"></div>
+            <div class="contacts-wrap">
+              <div class="contacts-label">At this company</div>
+              <div id="dmContacts"><div class="contacts-loading"><div class="contacts-spinner"></div>Finding contacts…</div></div>
+            </div>
           </div>
         </div>
       </div>
@@ -644,6 +692,7 @@
     const item = getHistory().find(h => String(h.id) === String(id));
     if (!item) return;
     renderResults(item.url, item.plan);
+    loadContacts(item.url, item.plan);
   }
 
   $('clearHistoryBtn').addEventListener('click', () => {
@@ -661,7 +710,9 @@
     if (!hash) return false;
     try {
       const { url, plan } = JSON.parse(decodeURIComponent(escape(atob(hash))));
-      renderResults(url, plan); return true;
+      renderResults(url, plan);
+      loadContacts(url, plan);
+      return true;
     } catch { return false; }
   }
 
@@ -822,6 +873,7 @@
       await new Promise(r => setTimeout(r, 200));
       saveToHistory(url, plan);
       renderResults(url, plan);
+      loadContacts(url, plan);
     } catch (err) {
       $('loadingSection').style.display = 'none';
       $('formSection').style.display = 'block';
@@ -883,6 +935,58 @@
 
     // Update URL hash for sharing
     history.replaceState(null, '', '#' + encodeShare(url, plan));
+  }
+
+  // ── Contact enrichment (async, after results render) ──────────────────────
+  function initials(name) {
+    return name.split(' ').filter(Boolean).map(w => w[0]).slice(0, 2).join('').toUpperCase();
+  }
+
+  function renderContactSlot(el, people) {
+    if (!people || !people.length) {
+      el.innerHTML = '<div style="font-size:12px;color:var(--muted)">No contacts found</div>';
+      return;
+    }
+    el.innerHTML = people.map(p => {
+      const li = p.linkedin_url
+        ? `<a href="${esc(p.linkedin_url)}" target="_blank" rel="noopener" class="contact-li" title="Open LinkedIn">in</a>`
+        : `<div class="contact-li-dim">in</div>`;
+      const avatar = p.photo_url
+        ? `<img src="${esc(p.photo_url)}" alt="${esc(p.name)}" />`
+        : initials(p.name);
+      return `
+        <${p.linkedin_url ? `a href="${esc(p.linkedin_url)}" target="_blank" rel="noopener"` : 'div'} class="contact-item">
+          <div class="contact-avatar">${avatar}</div>
+          <div class="contact-info">
+            <div class="contact-name">${esc(p.name)}</div>
+            <div class="contact-role">${esc(p.title)}</div>
+          </div>
+          ${li}
+        </${p.linkedin_url ? 'a' : 'div'}>`;
+    }).join('');
+  }
+
+  async function loadContacts(url, plan) {
+    const domain = (() => { try { return new URL(url).hostname.replace(/^www\./, ''); } catch { return ''; } })();
+    if (!domain) return;
+    try {
+      const res = await fetch('/api/people', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          domain,
+          championTitle: plan.champion?.title || '',
+          dmTitle:       plan.decision_maker?.title || '',
+        }),
+      });
+      if (!res.ok) throw new Error('contact search failed');
+      const data = await res.json();
+      renderContactSlot($('champContacts'), data.champion);
+      renderContactSlot($('dmContacts'),   data.decisionMaker);
+    } catch {
+      $('champContacts').innerHTML = '<div style="font-size:12px;color:var(--muted)">Contact search unavailable</div>';
+      $('dmContacts').innerHTML    = '<div style="font-size:12px;color:var(--muted)">Contact search unavailable</div>';
+    }
   }
 
   // ── Init ───────────────────────────────────────────────────────────────────
