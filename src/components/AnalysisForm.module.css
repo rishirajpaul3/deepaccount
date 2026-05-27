@@ -1,0 +1,93 @@
+.wrap { max-width: 560px; }
+
+.heading { margin-bottom: 32px; }
+.label {
+  font-size: 10px; font-weight: 700; text-transform: uppercase;
+  letter-spacing: 1.2px; color: var(--muted); margin-bottom: 8px;
+}
+.h1 { font-size: 28px; font-weight: 800; letter-spacing: -0.6px; color: var(--text); margin-bottom: 8px; }
+.sub { font-size: 14px; color: var(--muted); line-height: 1.6; }
+
+.form { display: flex; flex-direction: column; gap: 20px; }
+
+.field { display: flex; flex-direction: column; gap: 6px; }
+
+.fieldLabel {
+  font-size: 12px; font-weight: 700; color: var(--text2);
+  display: flex; align-items: center; justify-content: space-between;
+}
+.keyLink { font-weight: 600; color: var(--accent); font-size: 11px; }
+.keyLink:hover { color: var(--accent-dark); }
+
+.input {
+  width: 100%;
+  padding: 11px 14px;
+  border: 1px solid var(--border2);
+  border-radius: 10px;
+  background: var(--surface);
+  font-size: 14px;
+  color: var(--text);
+  font-family: inherit;
+  transition: border-color .15s, box-shadow .15s;
+  outline: none;
+  box-sizing: border-box;
+}
+.input:focus {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px var(--accent-light);
+}
+.input:disabled { opacity: .6; cursor: not-allowed; }
+.input::placeholder { color: var(--muted); }
+
+.textarea { resize: vertical; min-height: 80px; line-height: 1.6; }
+
+.keyNote { font-size: 11px; color: var(--muted); }
+
+.submitBtn {
+  padding: 13px 28px;
+  border-radius: 100px;
+  background: var(--accent);
+  color: #fff;
+  font-size: 15px;
+  font-weight: 700;
+  border: none;
+  cursor: pointer;
+  transition: background .15s;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  width: fit-content;
+}
+.submitBtn:hover:not(:disabled) { background: var(--accent-dark); }
+.submitBtn:disabled { opacity: .5; cursor: not-allowed; }
+
+.progress {
+  margin-top: 28px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.progressStep {
+  font-size: 13px;
+  color: var(--muted);
+  padding-left: 20px;
+  position: relative;
+}
+.progressStep::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--accent-light);
+  border: 1.5px solid var(--accent);
+  animation: pulse 1.5s ease-in-out infinite;
+}
+@keyframes pulse {
+  0%, 100% { opacity: .5; transform: translateY(-50%) scale(1); }
+  50% { opacity: 1; transform: translateY(-50%) scale(1.2); }
+}

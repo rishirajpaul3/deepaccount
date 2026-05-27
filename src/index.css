@@ -1,0 +1,73 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Playfair+Display:ital,wght@0,700;0,800;1,700&display=swap');
+
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+:root {
+  --cream:        #FAF8F3;
+  --cream2:       #F3EFE6;
+  --cream3:       #EAE3D6;
+  --surface:      #FFFFFF;
+  --text:         #1C1712;
+  --text2:        #3D3529;
+  --muted:        #8C7E6E;
+  --border:       #E0D8CC;
+  --border2:      #CEC4B4;
+  --accent:       #C17B2A;
+  --accent-dark:  #96601E;
+  --accent-light: #FDF3E3;
+  --radius:       14px;
+  --shadow-sm:    0 1px 4px rgba(28,23,18,.06);
+  --shadow:       0 4px 20px rgba(28,23,18,.09);
+  --shadow-lg:    0 12px 48px rgba(28,23,18,.12);
+  --green:        #15803D;
+  --green-bg:     #F0FDF4;
+  --green-border: #BBF7D0;
+  --red:          #B91C1C;
+  --red-bg:       #FEF2F2;
+  --red-border:   #FECACA;
+}
+
+body {
+  font-family: 'Inter', system-ui, sans-serif;
+  background: var(--cream);
+  color: var(--text);
+  min-height: 100vh;
+  line-height: 1.6;
+  -webkit-font-smoothing: antialiased;
+}
+
+a { color: inherit; text-decoration: none; }
+button { cursor: pointer; font-family: inherit; border: none; outline: none; }
+#root { min-height: 100vh; }
+.serif { font-family: 'Playfair Display', Georgia, serif; }
+
+.page-loading {
+  display: flex; align-items: center; justify-content: center;
+  min-height: 100vh;
+}
+
+.spinner {
+  width: 20px; height: 20px;
+  border: 2px solid var(--border);
+  border-top-color: var(--accent);
+  border-radius: 50%;
+  animation: spin .7s linear infinite;
+}
+
+@keyframes spin { to { transform: rotate(360deg); } }
+
+@keyframes shimmer {
+  from { background-position: -600px 0; }
+  to   { background-position:  600px 0; }
+}
+
+.shimmer {
+  background: linear-gradient(90deg, var(--border) 25%, var(--cream2) 50%, var(--border) 75%);
+  background-size: 600px 100%;
+  animation: shimmer 1.5s infinite;
+  border-radius: 6px;
+}
+
+@media (max-width: 640px) {
+  :root { --radius: 10px; }
+}
