@@ -1,11 +1,7 @@
 import Stripe from 'stripe';
-import { createClient } from '@supabase/supabase-js';
+import pool from './db.js';
 
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY);
-const supabase = createClient(
-  process.env.SUPABASE_URL,
-  process.env.SUPABASE_SERVICE_ROLE_KEY
-);
 
 export const config = { api: { bodyParser: false } };
 
@@ -35,24 +31,21 @@ export default async function handler(req, res) {
     const session = event.data.object;
     const userId = session.metadata?.user_id;
     if (userId) {
-      await supabase
-        .from('user_usage')
-        .upsert({ user_id: userId, plan: 'pro' }, { onConflict: 'user_id' });
+      await pool.query(`
+        INSERT INTO user_usage (user_id, plan, stripe_customer_id)
+        VALUES ($1, 'pro', $2)
+        ON CONFLICT (user_id) DO UPDATE
+        SET plan = 'pro', stripe_customer_id = $2
+      `, [userId, session.customer]);
     }
   }
 
   if (event.type === 'customer.subscription.deleted') {
     const sub = event.data.object;
-    const { data: rows } = await supabase
-      .from('user_usage')
-      .select('user_id')
-      .eq('stripe_customer_id', sub.customer);
-    if (rows?.[0]) {
-      await supabase
-        .from('user_usage')
-        .update({ plan: 'free' })
-        .eq('user_id', rows[0].user_id);
-    }
+    await pool.query(
+      `UPDATE user_usage SET plan = 'free' WHERE stripe_customer_id = $1`,
+      [sub.customer]
+    );
   }
 
   res.json({ received: true });

@@ -1,20 +1,28 @@
 import { useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { useAuth } from '../contexts/AuthContext';
+import { useUser, useSignIn } from '@clerk/clerk-react';
 import styles from './Login.module.css';
 
 export default function Login() {
-  const { user, loading, signInWithGoogle } = useAuth();
+  const { isSignedIn } = useUser();
+  const { signIn, isLoaded } = useSignIn();
   const navigate = useNavigate();
 
   useEffect(() => {
-    if (user) navigate('/dashboard', { replace: true });
-  }, [user, navigate]);
+    if (isSignedIn) navigate('/dashboard', { replace: true });
+  }, [isSignedIn, navigate]);
 
   const params = new URLSearchParams(window.location.search);
   const plan = params.get('plan');
 
-  if (loading) return null;
+  async function handleGoogle() {
+    if (!isLoaded || !signIn) return;
+    await signIn.authenticateWithRedirect({
+      strategy: 'oauth_google',
+      redirectUrl: `${window.location.origin}/sso-callback`,
+      redirectUrlComplete: '/dashboard',
+    });
+  }
 
   return (
     <div className={styles.page}>
@@ -28,7 +36,7 @@ export default function Login() {
             ? 'Create your account to continue to Pro checkout.'
             : 'Get fit scores, buyer contacts, and first lines in 30 seconds.'}
         </p>
-        <button className={styles.googleBtn} onClick={signInWithGoogle}>
+        <button className={styles.googleBtn} onClick={handleGoogle} disabled={!isLoaded}>
           <GoogleIcon />
           Continue with Google
         </button>

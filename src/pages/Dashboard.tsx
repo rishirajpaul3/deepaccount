@@ -5,50 +5,40 @@ import Header from '../components/Header';
 import AnalysisForm from '../components/AnalysisForm';
 import ResultsView from '../components/ResultsView';
 import { useAuth } from '../contexts/AuthContext';
-import { supabase } from '../lib/supabase';
-import type { Analysis, UserUsage } from '../lib/supabase';
+import { apiGet, apiPost } from '../lib/api';
+import type { Analysis, UserUsage } from '../lib/types';
 import styles from './Dashboard.module.css';
 
 export default function Dashboard() {
-  const { user } = useAuth();
+  const { getToken } = useAuth();
   const navigate = useNavigate();
 
-  const [usage, setUsage]           = useState<UserUsage | null>(null);
-  const [history, setHistory]       = useState<Analysis[]>([]);
-  const [activeResult, setActive]   = useState<Analysis | null>(null);
-  const [running, setRunning]       = useState(false);
-  const [view, setView]             = useState<'new' | 'history'>('new');
+  const [usage, setUsage]         = useState<UserUsage | null>(null);
+  const [history, setHistory]     = useState<Analysis[]>([]);
+  const [activeResult, setActive] = useState<Analysis | null>(null);
+  const [running, setRunning]     = useState(false);
 
-  // load usage + history
   useEffect(() => {
-    if (!user) return;
     loadUsage();
     loadHistory();
-  }, [user]);
+  }, []);
 
   async function loadUsage() {
-    const { data } = await supabase
-      .from('user_usage')
-      .select('*')
-      .eq('user_id', user!.id)
-      .single();
-    if (data) setUsage(data);
+    try {
+      const data = await apiGet('/api/usage', getToken);
+      setUsage(data);
+    } catch { /* silently ignore on first load */ }
   }
 
   async function loadHistory() {
-    const { data } = await supabase
-      .from('analyses')
-      .select('*')
-      .eq('user_id', user!.id)
-      .order('created_at', { ascending: false })
-      .limit(50);
-    if (data) setHistory(data);
+    try {
+      const data = await apiGet('/api/analyses', getToken);
+      setHistory(data);
+    } catch { /* silently ignore */ }
   }
 
   async function handleAnalysis(url: string, icp: string, anthropicKey: string) {
-    if (!user) return;
-
-    const plan = usage?.plan ?? 'free';
+    const plan  = usage?.plan ?? 'free';
     const count = usage?.analyses_this_month ?? 0;
     if (plan === 'free' && count >= 10) {
       toast.error('Free limit reached. Upgrade to Pro for unlimited analyses.');
@@ -61,28 +51,17 @@ export default function Dashboard() {
 
     try {
       // 1. Scrape
-      const scrapeRes = await fetch('/api/scrape', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ url }),
-      });
-      const scrapeData = await scrapeRes.json();
+      const scrapeData = await apiPost('/api/scrape', { url }, getToken);
       if (!scrapeData.success) throw new Error('Could not scrape that URL. Try the homepage.');
       const markdown = scrapeData.data?.markdown ?? '';
 
       // 2. Contacts
       const domain = new URL(url.startsWith('http') ? url : `https://${url}`).hostname.replace('www.', '');
       const [champTitle, dmTitle] = parseIcpTitles(icp);
-      const contactsRes = await fetch('/api/people', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ domain, champTitle, dmTitle }),
-      });
-      const contactsData = await contactsRes.json();
+      const contactsData = await apiPost('/api/people', { domain, champTitle, dmTitle }, getToken);
       const contacts = contactsData.contacts ?? [];
 
       // 3. Claude
-      const prompt = buildPrompt(url, icp, markdown, contacts);
       const claudeRes = await fetch('https://api.anthropic.com/v1/messages', {
         method: 'POST',
         headers: {
@@ -94,7 +73,7 @@ export default function Dashboard() {
         body: JSON.stringify({
           model: 'claude-sonnet-4-5',
           max_tokens: 1500,
-          messages: [{ role: 'user', content: prompt }],
+          messages: [{ role: 'user', content: buildPrompt(url, icp, markdown, contacts) }],
         }),
       });
       if (!claudeRes.ok) {
@@ -102,31 +81,19 @@ export default function Dashboard() {
         throw new Error(err.error?.message ?? 'Claude API error');
       }
       const claudeData = await claudeRes.json();
-      const raw = claudeData.content?.[0]?.text ?? '';
-      const result = parseClaudeResponse(raw);
+      const result = parseClaudeResponse(claudeData.content?.[0]?.text ?? '');
 
-      // 4. Save to Supabase
-      const { data: saved, error } = await supabase
-        .from('analyses')
-        .insert({
-          user_id: user.id,
-          company_url: url,
-          icp: icp,
-          result: { ...result, contacts },
-          company_name: result.company_name ?? domain,
-        })
-        .select()
-        .single();
+      // 4. Save via API (also increments usage)
+      const saved = await apiPost('/api/analyses', {
+        company_url: url,
+        company_name: result.company_name ?? domain,
+        icp,
+        result: { ...result, contacts },
+      }, getToken);
 
-      if (error) throw error;
-
-      // 5. Increment usage
-      await supabase.rpc('increment_usage', { uid: user.id });
-      loadUsage();
-
+      setUsage(prev => prev ? { ...prev, analyses_this_month: prev.analyses_this_month + 1 } : prev);
       setActive(saved);
       setHistory(prev => [saved, ...prev]);
-      setView('new');
     } catch (err: any) {
       toast.error(err.message ?? 'Something went wrong.');
     } finally {
@@ -139,11 +106,10 @@ export default function Dashboard() {
       <Header usage={usage ? { count: usage.analyses_this_month, plan: usage.plan } : null} />
 
       <div className={styles.layout}>
-        {/* Sidebar */}
         <aside className={styles.sidebar}>
           <button
-            className={`${styles.newBtn} ${view === 'new' && !activeResult ? styles.newBtnActive : ''}`}
-            onClick={() => { setView('new'); setActive(null); }}
+            className={`${styles.newBtn} ${!activeResult ? styles.newBtnActive : ''}`}
+            onClick={() => setActive(null)}
           >
             + New analysis
           </button>
@@ -155,7 +121,7 @@ export default function Dashboard() {
                 <button
                   key={h.id}
                   className={`${styles.historyItem} ${activeResult?.id === h.id ? styles.historyItemActive : ''}`}
-                  onClick={() => { setActive(h); setView('history'); }}
+                  onClick={() => setActive(h)}
                 >
                   <span className={styles.historyDomain}>{getDomain(h.company_url)}</span>
                   <span className={styles.historyDate}>{formatDate(h.created_at)}</span>
@@ -165,16 +131,11 @@ export default function Dashboard() {
           )}
         </aside>
 
-        {/* Main */}
         <main className={styles.main}>
-          {activeResult ? (
-            <ResultsView
-              analysis={activeResult}
-              onBack={() => { setActive(null); setView('new'); }}
-            />
-          ) : (
-            <AnalysisForm onSubmit={handleAnalysis} loading={running} />
-          )}
+          {activeResult
+            ? <ResultsView analysis={activeResult} onBack={() => setActive(null)} />
+            : <AnalysisForm onSubmit={handleAnalysis} loading={running} />
+          }
         </main>
       </div>
     </div>
@@ -194,18 +155,15 @@ function formatDate(iso: string) {
 
 function parseIcpTitles(icp: string): [string, string] {
   const lower = icp.toLowerCase();
-  let champ = 'Sales Manager';
-  let dm    = 'VP Sales';
-  if (lower.includes('engineer') || lower.includes('developer') || lower.includes('cto')) {
-    champ = 'Software Engineer'; dm = 'CTO';
-  } else if (lower.includes('market')) {
-    champ = 'Marketing Manager'; dm = 'CMO';
-  } else if (lower.includes('hr') || lower.includes('people')) {
-    champ = 'HR Manager'; dm = 'Chief People Officer';
-  } else if (lower.includes('finance') || lower.includes('cfo')) {
-    champ = 'Finance Manager'; dm = 'CFO';
-  }
-  return [champ, dm];
+  if (lower.includes('engineer') || lower.includes('developer') || lower.includes('cto'))
+    return ['Software Engineer', 'CTO'];
+  if (lower.includes('market'))
+    return ['Marketing Manager', 'CMO'];
+  if (lower.includes('hr') || lower.includes('people'))
+    return ['HR Manager', 'Chief People Officer'];
+  if (lower.includes('finance') || lower.includes('cfo'))
+    return ['Finance Manager', 'CFO'];
+  return ['Sales Manager', 'VP Sales'];
 }
 
 function buildPrompt(url: string, icp: string, content: string, contacts: any[]) {
@@ -243,7 +201,5 @@ function parseClaudeResponse(raw: string): Record<string, any> {
   try {
     const match = raw.match(/\{[\s\S]*\}/);
     return match ? JSON.parse(match[0]) : {};
-  } catch {
-    return {};
-  }
+  } catch { return {}; }
 }

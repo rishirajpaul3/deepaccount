@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import toast from 'react-hot-toast';
-import type { Analysis } from '../lib/supabase';
+import type { Analysis } from '../lib/types';
 import styles from './ResultsView.module.css';
 
 interface Props {
