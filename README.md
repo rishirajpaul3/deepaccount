@@ -17,7 +17,7 @@ DeepAccount scrapes a company's public pages (homepage, pricing, about, careers,
 | Red Flags | 3 risks or mismatches to watch |
 | Champion Profile | Job title most likely to champion internally, and what to say |
 | Decision Maker Profile | Who holds budget and how to loop them in |
-| First Line | One personalized cold outreach opener — one click to copy |
+| First Line | One personalized cold outreach opener — copy with one click |
 | Next Step | Recommended action to move the deal forward |
 
 ---
@@ -25,13 +25,11 @@ DeepAccount scrapes a company's public pages (homepage, pricing, about, careers,
 ## Getting started
 
 1. Open the [live app](https://deepaccount.vercel.app)
-2. Click **API Keys** in the top right
-3. Add your keys:
-   - [Anthropic API key](https://console.anthropic.com) — for Claude Sonnet
-   - [Firecrawl API key](https://firecrawl.dev) — for website scraping
+2. Click **API Key** in the top right
+3. Add your [Anthropic API key](https://console.anthropic.com) — that's all you need
 4. Paste a company URL, describe your ICP, and hit Analyze
 
-Keys are saved in your browser's localStorage. Nothing is sent to any server other than Anthropic and Firecrawl directly.
+Your key is saved in your browser's localStorage. Website scraping is handled server-side — you never need a Firecrawl key.
 
 **Shortcut:** `Cmd+Enter` (Mac) or `Ctrl+Enter` (Windows) to run the analysis.
 
@@ -39,28 +37,35 @@ Keys are saved in your browser's localStorage. Nothing is sent to any server oth
 
 ## Self-hosting
 
-No build step required. It's a single HTML file.
-
 ```bash
 git clone https://github.com/rishirajpaul3/deepaccount.git
 cd deepaccount
-open index.html
 ```
 
-To deploy your own version on Vercel:
+Add your Firecrawl key as an environment variable, then deploy:
 
 ```bash
-npm i -g vercel
+vercel env add FIRECRAWL_API_KEY
 vercel --prod
 ```
 
+The scraping proxy (`api/scrape.js`) reads `FIRECRAWL_API_KEY` from the environment. Users of your deployment only need their own Anthropic key.
+
 ---
+
+## Features
+
+- **History** — recent analyses saved locally, one click to restore
+- **Share link** — every brief gets a shareable URL (encoded in the hash, no server needed)
+- **Copy brief** — exports the full brief as clean plain text for Slack, email, or Notion
+- **One key only** — scraping is proxied server-side, users only need an Anthropic key
 
 ## Stack
 
-- Vanilla HTML, CSS, JavaScript — single file, zero dependencies
+- Vanilla HTML, CSS, JavaScript — single file frontend
+- [Vercel](https://vercel.com) — hosting + serverless scraping proxy
 - [Claude Sonnet](https://anthropic.com) — account analysis and structured output
-- [Firecrawl](https://firecrawl.dev) — website scraping
+- [Firecrawl](https://firecrawl.dev) — website scraping (server-side)
 
 ---
 
