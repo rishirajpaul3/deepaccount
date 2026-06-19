@@ -58,8 +58,8 @@ export default function Dashboard() {
       // 2. Contacts
       const domain = new URL(url.startsWith('http') ? url : `https://${url}`).hostname.replace('www.', '');
       const [champTitle, dmTitle] = parseIcpTitles(icp);
-      const contactsData = await apiPost('/api/people', { domain, champTitle, dmTitle }, getToken);
-      const contacts = contactsData.contacts ?? [];
+      const contactsData = await apiPost('/api/people', { domain, championTitle: champTitle, dmTitle }, getToken);
+      const contacts = [...(contactsData.champion ?? []), ...(contactsData.decisionMaker ?? [])];
 
       // 3. Claude
       const claudeRes = await fetch('https://api.anthropic.com/v1/messages', {
@@ -71,7 +71,7 @@ export default function Dashboard() {
           'anthropic-dangerous-direct-browser-access': 'true',
         },
         body: JSON.stringify({
-          model: 'claude-sonnet-4-5',
+          model: 'claude-sonnet-4-6',
           max_tokens: 1500,
           messages: [{ role: 'user', content: buildPrompt(url, icp, markdown, contacts) }],
         }),
