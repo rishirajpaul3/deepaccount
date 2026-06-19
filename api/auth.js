@@ -1,6 +1,4 @@
-import { createClerkClient } from '@clerk/backend';
-
-const clerk = createClerkClient({ secretKey: process.env.CLERK_SECRET_KEY });
+import { verifyToken } from '@clerk/backend';
 
 const AUTHORIZED_PARTIES = [
   'https://deepaccount.vercel.app',
@@ -15,7 +13,10 @@ export async function requireUser(req, res) {
     return null;
   }
   try {
-    const payload = await clerk.verifyToken(token, { authorizedParties: AUTHORIZED_PARTIES });
+    const payload = await verifyToken(token, {
+      secretKey: process.env.CLERK_SECRET_KEY,
+      authorizedParties: AUTHORIZED_PARTIES,
+    });
     return { id: payload.sub };
   } catch (err) {
     console.error('[auth] verifyToken failed:', err?.message ?? err);
